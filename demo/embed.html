@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrayerTime Widget – Embed</title>
+  <style>
+    html, body { margin:0; padding:0; background:transparent; }
+    /* Optional center wrapper for nice spacing in iframe */
+    .frame-wrap { padding: 8px; }
+  </style>
+</head>
+<body>
+  <div class="frame-wrap">
+    <div id="widget-flower-hill"></div>
+  </div>
+
+  <script src="../src/prayertime-widget.js"></script>
+  <script src="../src/aladhan-provider.js"></script>
+  <script>
+    // If used cross-origin, ensure the host allows CORS for jamaat JSON or serve from same origin
+    PrayerTimeWidget.autoDaily({
+      target: '#widget-flower-hill',
+      city: 'Flower Hill, MD',
+      theme: 'auto',
+      refreshOffsetMinutes: 1,
+      jamaatUrl: './jamaat-flower-hill.json',
+      getTimes: async () => {
+        return await PrayerTimeWidget.providers.aladhan.fetchTimesByCity({
+          city: 'Flower Hill', state: 'Maryland', country: 'United States', method: 'karachi', school: 1
+        });
+      }
+    });
+  </script>
+</body>
+</html>

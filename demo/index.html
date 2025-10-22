@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrayerTime Widget Demo</title>
+  <style>
+    :root{ --demo-accent: #ec4899; }
+    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial; margin:0; padding:24px; background:#ffffff; color:#000}
+    .wrap{display:flex; gap:24px; flex-wrap:wrap}
+    .card{background:#fff; border:1px solid #000; border-radius:12px; padding:12px}
+    .dark-demo{background:#0b1220; color:#e5e7eb}
+    .footer{margin-top:24px; font-size:12px; color:#333}
+    a{color:var(--demo-accent); text-decoration:none}
+  </style>
+</head>
+<body>
+  <h1>PrayerTime Widget Demo</h1>
+  <p>This is a lightweight, build-free widget. Open this file directly or via a local server.</p>
+
+  <div class="wrap">
+    <div class="card">
+      <h3>Light (auto)</h3>
+      <div id="widget-light"></div>
+    </div>
+
+    <div class="card dark-demo">
+      <h3>Dark</h3>
+      <div id="widget-dark"></div>
+    </div>
+
+    <div class="card">
+      <h3>Karachi method (via Aladhan)</h3>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+        <button id="load-karachi">Load Karachi timings</button>
+        <span id="karachi-status" style="font-size:12px; color:#475569"></span>
+      </div>
+      <div id="widget-karachi"></div>
+    </div>
+
+    <div class="card">
+      <h3>Flower Hill, MD (auto daily)</h3>
+      <div id="widget-flower-hill"></div>
+      <div style="font-size:12px; color:#475569; margin-top:6px">Refreshes every night just after midnight (local).</div>
+    </div>
+  </div>
+
+  <div class="footer">Made for quick embedding. Customize with CSS variables or pass theme option.</div>
+
+  <script src="../src/prayertime-widget.js"></script>
+  <script src="../src/aladhan-provider.js"></script>
+  <script>
+    const sampleTimes = {
+      Fajr: '05:12',
+      Dhuhr: '12:08',
+      Asr: '15:24',
+      Maghrib: '18:01',
+      Isha: '19:19'
+    };
+
+    PrayerTimeWidget.init({ target: '#widget-light', city: 'Dubai', times: sampleTimes, theme: 'auto' });
+  PrayerTimeWidget.init({ target: '#widget-dark', city: 'Dubai', times: sampleTimes, theme: 'dark' });
+
+    const karachiBtn = document.getElementById('load-karachi');
+    const karachiStatus = document.getElementById('karachi-status');
+    karachiBtn?.addEventListener('click', async () => {
+      karachiStatus.textContent = 'Loading…';
+      karachiBtn.disabled = true;
+      try {
+        const times = await PrayerTimeWidget.providers.aladhan.fetchTimesByCity({
+          city: 'Karachi',
+          country: 'Pakistan',
+          method: 'karachi', // University of Islamic Sciences, Karachi
+          school: 1 // Hanafi
+        });
+        PrayerTimeWidget.init({ target: '#widget-karachi', city: 'Karachi', times, theme: 'auto' });
+        karachiStatus.textContent = 'Loaded.';
+      } catch (e) {
+        karachiStatus.textContent = 'Failed to load timings.';
+        console.error(e);
+      } finally {
+        karachiBtn.disabled = false;
+      }
+    });
+
+    // Auto daily refresh for Flower Hill, Maryland, USA using Karachi method (ID 2)
+    PrayerTimeWidget.autoDaily({
+      target: '#widget-flower-hill',
+      city: 'Flower Hill, MD',
+      theme: 'auto',
+      compact: false,
+      jamaatUrl: './jamaat-flower-hill.json',
+      refreshOffsetMinutes: 1, // a minute past midnight local time
+      getTimes: async () => {
+        return await PrayerTimeWidget.providers.aladhan.fetchTimesByCity({
+          city: 'Flower Hill',
+          country: 'United States',
+          state: 'Maryland',
+          method: 'karachi',
+          school: 1
+        });
+      }
+    });
+    // Jamaat times are now fetched from jamaatUrl and applied automatically.
+  </script>
+</body>
+</html>

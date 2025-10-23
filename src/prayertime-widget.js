@@ -163,6 +163,27 @@
     thead.appendChild(htr);
     var tbody = el('tbody');
 
+    function inferJamaat24(name, raw) {
+      var s = String(raw).trim();
+      var hasMeridiem = /\b(am|pm)\b/i.test(s);
+      if (hasMeridiem) return to24h(s);
+      // If no meridiem, infer by prayer name
+      var parts = s.split(':');
+      var h = parseInt(parts[0] || '0', 10);
+      var m = parseInt(parts[1] || '0', 10);
+      if (isNaN(h) || isNaN(m)) return ''; // non-time, let caller handle
+      var upper = String(name).toLowerCase();
+      var isPMPrayer = (upper === 'dhuhr' || upper === 'asr' || upper === 'maghrib' || upper === 'isha');
+      if (upper === 'fajr') {
+        if (h === 12) h = 0; // 12 -> 00
+      } else if (isPMPrayer) {
+        if (h < 12) h += 12; // assume PM
+      }
+      var hh = (h < 10 ? '0' + h : '' + h);
+      var mm = (m < 10 ? '0' + m : '' + m);
+      return hh + ':' + mm;
+    }
+
     for (var i = 0; i < keys.length; i++) {
       var name = keys[i];
       var tr = el('tr', 'ptw__tr');
@@ -173,9 +194,9 @@
       var jamaat = '—';
       if (jval != null && jval !== '') {
         if (/\d/.test(String(jval))) {
-          // Has digits; try to parse time, else show raw
-          var j24 = to24h(jval);
-          jamaat = j24 ? format12h(j24) : String(jval);
+          // Has digits; try to parse/infer time, else show raw
+          var j24i = inferJamaat24(name, jval);
+          jamaat = j24i ? format12h(j24i) : String(jval);
         } else {
           jamaat = String(jval);
         }
@@ -206,7 +227,7 @@
     if (document.getElementById('ptw-styles')) return;
     var style = el('style');
     style.id = 'ptw-styles';
-    style.textContent = "\n/* Core wrapper: black/white base with pink accent */\n.ptw{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,\"Noto Sans\",\"Helvetica Neue\",Arial,\"Apple Color Emoji\",\"Segoe UI Emoji\";\n  --ptw-bg:#ffffff;--ptw-fg:#000000;--ptw-border:#000000;--ptw-accent:#ec4899;\n  background:var(--ptw-bg);color:var(--ptw-fg);border:1px solid var(--ptw-border);border-radius:12px;padding:12px;max-width:420px;}\n.ptw--dark{--ptw-bg:#0b1220;--ptw-fg:#e5e7eb;--ptw-border:#1f2937;--ptw-accent:#f472b6;}\n.ptw--compact{padding:8px;border-radius:10px;max-width:360px;}\n.ptw__header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}\n.ptw__city{font-weight:700;}\n.ptw__date{font-size:12px;opacity:.8;}\n/* Table layout */\n.ptw__table-wrap{overflow-x:auto;}\n.ptw__table{width:100%;border-collapse:collapse;}\n.ptw__th,.ptw__td{border:1px solid var(--ptw-border);padding:8px 10px;text-align:left;}\n.ptw__th{background:var(--ptw-bg);color:var(--ptw-fg);font-weight:700;}\n.ptw__time,.ptw__jamaat{font-weight:600;}\n.ptw__row--next td{color:var(--ptw-accent);}\n.ptw__row--next .ptw__name{font-weight:700;}\n.ptw__countdown{margin-top:12px;font-size:12px;opacity:.9;}\n";
+  style.textContent = "\n/* Core wrapper: black/white base with pink accent */\n.ptw{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,\"Noto Sans\",\"Helvetica Neue\",Arial,\"Apple Color Emoji\",\"Segoe UI Emoji\";\n  --ptw-bg:#ffffff;--ptw-fg:#000000;--ptw-border:#000000;--ptw-accent:#ec4899;--ptw-max-width:420px;\n  background:var(--ptw-bg);color:var(--ptw-fg);border:1px solid var(--ptw-border);border-radius:12px;padding:12px;max-width:var(--ptw-max-width);}\n.ptw--dark{--ptw-bg:#0b1220;--ptw-fg:#e5e7eb;--ptw-border:#1f2937;--ptw-accent:#f472b6;}\n.ptw--compact{padding:8px;border-radius:10px;max-width:360px;}\n.ptw__header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}\n.ptw__city{font-weight:700;}\n.ptw__date{font-size:12px;opacity:.8;}\n/* Table layout */\n.ptw__table-wrap{overflow-x:auto;}\n.ptw__table{width:100%;border-collapse:collapse;}\n.ptw__th,.ptw__td{border:1px solid var(--ptw-border);padding:10px 12px;text-align:left;font-size:14px;}\n.ptw__th{background:var(--ptw-bg);color:var(--ptw-fg);font-weight:700;}\n.ptw__time,.ptw__jamaat{font-weight:600;}\n.ptw__row--next td{color:var(--ptw-accent);}\n.ptw__row--next .ptw__name{font-weight:700;}\n.ptw__countdown{margin-top:12px;font-size:12px;opacity:.9;}\n";
     document.head.appendChild(style);
   }
 

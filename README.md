@@ -53,7 +53,7 @@ Open `demo/index.html` for a working example.
 - compact: boolean for tighter spacing and smaller max width
 
 ## Styling
-Default colors are black/white with a pink accent. You can override colors using CSS variables on `.ptw` or a parent element:
+Default colors are black/white with a pink accent. You can override colors and size using CSS variables on `.ptw` or a parent element:
 
 ```css
 .ptw { 
@@ -61,8 +61,13 @@ Default colors are black/white with a pink accent. You can override colors using
   --ptw-fg: #000000;  /* text */
   --ptw-border: #000000; /* table borders */
   --ptw-accent: #ec4899; /* highlight for next prayer */
+  --ptw-max-width: 600px; /* make table wider (default 420px) */
 }
 ```
+
+Notes:
+- To adjust font size or padding, you can override `.ptw__th, .ptw__td { font-size: 16px; padding: 12px 14px; }` in your site CSS.
+- In an iframe, also increase the iframe height to avoid scrollbars.
 
 Layout is a semantic table with 3 columns: Prayer | Time | Jamaat.
 

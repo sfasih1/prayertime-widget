@@ -24,10 +24,18 @@
       city: 'Flower Hill, MD',
       theme: 'auto',
       refreshOffsetMinutes: 1,
-      jamaatUrl: './jamaat-flower-hill.json',
+      // Use Google Sheets (published CSV) for Jamaat so non-devs can update easily
+      jamaatCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQTlfN3u4vfTdfDqNGX_ROxJIJaJyPDzFDRoQhsqIyOt6z9PkBYokHUWKskTao0zkN4yvUUbASjWV3k/pub?output=csv',
+      // Optionally re-check the sheet every 5 minutes without reloading the page
+      jamaatRefreshMinutes: 5,
       getTimes: async () => {
         return await PrayerTimeWidget.providers.aladhan.fetchTimesByCity({
-          city: 'Flower Hill', state: 'Maryland', country: 'United States', method: 'karachi', school: 1
+          city: 'Flower Hill',
+          state: 'Maryland',
+          country: 'United States',
+          method: 'karachi',
+          school: 1,
+          timezonestring: 'America/New_York'
         });
       }
     });

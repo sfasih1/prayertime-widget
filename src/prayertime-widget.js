@@ -169,7 +169,17 @@
       if (name === next.name) tr.classList.add('ptw__row--next');
       var tdName = el('td', 'ptw__td ptw__name', name);
       var tdTime = el('td', 'ptw__td ptw__time', format12h(opt.times[name]));
-      var jamaat = (opt.jamaatTimes && opt.jamaatTimes[name]) ? format12h(opt.jamaatTimes[name]) : '—';
+      var jval = opt.jamaatTimes && opt.jamaatTimes[name];
+      var jamaat = '—';
+      if (jval != null && jval !== '') {
+        if (/\d/.test(String(jval))) {
+          // Has digits; try to parse time, else show raw
+          var j24 = to24h(jval);
+          jamaat = j24 ? format12h(j24) : String(jval);
+        } else {
+          jamaat = String(jval);
+        }
+      }
       var tdJamaat = el('td', 'ptw__td ptw__jamaat', jamaat);
       tr.appendChild(tdName);
       tr.appendChild(tdTime);
@@ -217,7 +227,7 @@
     opt.date = opt.date ? new Date(opt.date) : new Date();
     opt.times = normalizeTimes(opt.times);
     if (!opt.times) throw new Error('PrayerTimeWidget: times are required');
-    if (opt.jamaatTimes) opt.jamaatTimes = normalizeTimes(opt.jamaatTimes);
+  // Keep jamaatTimes as-is to allow free text like 'At Sunset'.
 
     render(container, opt);
 
@@ -239,12 +249,37 @@
   }
 
   function autoDaily(opts) {
-    // opts: { target, city, theme?, compact?, getTimes: () => Promise<times>, getJamaatTimes?: () => Promise<times>|null, jamaatUrl?: string, refreshOffsetMinutes?: number }
+    // opts: { target, city, theme?, compact?, getTimes: () => Promise<times>, getJamaatTimes?: () => Promise<any>|null, jamaatUrl?: string, jamaatCsvUrl?: string, refreshOffsetMinutes?: number, jamaatRefreshMinutes?: number }
     if (!opts || !opts.target || !opts.getTimes) throw new Error('PrayerTimeWidget.autoDaily: target and getTimes are required');
     var destroyed = false;
     var timer = null;
     var instance = null;
     var refreshOffset = opts.refreshOffsetMinutes == null ? 1 : opts.refreshOffsetMinutes; // default 1 minute past midnight
+    var currentTimes = null;
+    var jamaatInterval = null;
+
+    function parseCsv(text) {
+      var map = {};
+      if (!text) return map;
+      var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
+      if (!lines.length) return map;
+      // support header: Prayer,Time or Name,Jamaat
+      var header = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
+      var hasHeader = header.length >= 2 && (header[0].indexOf('prayer') !== -1 || header[0].indexOf('name') !== -1);
+      var startIdx = hasHeader ? 1 : 0;
+      var keys = ['fajr','dhuhr','asr','maghrib','isha'];
+      for (var i = startIdx; i < lines.length; i++) {
+        var parts = lines[i].split(',');
+        if (parts.length < 2) continue;
+        var pname = String(parts[0] || '').trim();
+        var ptime = String(parts[1] || '').trim();
+        var low = pname.toLowerCase();
+        for (var k = 0; k < keys.length; k++) {
+          if (low === keys[k]) { map[keys[k][0].toUpperCase() + keys[k].slice(1)] = ptime; break; }
+        }
+      }
+      return map;
+    }
 
     async function fetchJamaatIfAny() {
       try {
@@ -258,6 +293,12 @@
           // Allow either direct map {Fajr:..} or nested { jamaat: {..} } or { times: {..} }
           var data = (json && (json.jamaat || json.times || json)) || null;
           return data;
+        }
+        if (opts.jamaatCsvUrl) {
+          var res2 = await fetch(opts.jamaatCsvUrl, { headers: { 'Accept': 'text/plain' } });
+          if (!res2.ok) throw new Error('Failed to fetch jamaat CSV: ' + res2.status);
+          var text = await res2.text();
+          return parseCsv(text);
         }
       } catch (e) {
         console.warn('PrayerTimeWidget.autoDaily: jamaat fetch failed', e);
@@ -274,6 +315,7 @@
           var results = await Promise.all([opts.getTimes(), fetchJamaatIfAny()]);
           var times = results[0];
           var j = results[1];
+          currentTimes = times;
           if (instance && instance.destroy) instance.destroy();
           instance = init({ target: opts.target, city: opts.city, times: times, jamaatTimes: j || undefined, theme: opts.theme, compact: opts.compact });
         } catch (e) {
@@ -291,9 +333,24 @@
         var results = await Promise.all([opts.getTimes(), fetchJamaatIfAny()]);
         var times = results[0];
         var j = results[1];
+        currentTimes = times;
         instance = init({ target: opts.target, city: opts.city, times: times, jamaatTimes: j || undefined, theme: opts.theme, compact: opts.compact });
       } catch (e) {
         console.error('PrayerTimeWidget.autoDaily initial fetch failed', e);
+      }
+      // Optional frequent jamaat-only refresh
+      if (opts.jamaatRefreshMinutes && opts.jamaatRefreshMinutes > 0) {
+        jamaatInterval = setInterval(async function () {
+          if (destroyed) return;
+          try {
+            var j2 = await fetchJamaatIfAny();
+            if (!currentTimes) return;
+            if (instance && instance.destroy) instance.destroy();
+            instance = init({ target: opts.target, city: opts.city, times: currentTimes, jamaatTimes: j2 || undefined, theme: opts.theme, compact: opts.compact });
+          } catch (e) {
+            // ignore transient errors
+          }
+        }, opts.jamaatRefreshMinutes * 60 * 1000);
       }
       scheduleNext();
     })();
@@ -302,6 +359,7 @@
       destroy: function () {
         destroyed = true;
         clearTimeout(timer);
+        if (jamaatInterval) clearInterval(jamaatInterval);
         if (instance && instance.destroy) instance.destroy();
       }
     };

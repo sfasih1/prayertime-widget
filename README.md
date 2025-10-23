@@ -76,6 +76,33 @@ Layout is a semantic table with 3 columns: Prayer | Time | Jamaat.
 MIT
 
 ## Using calculation methods (Aladhan)
+## Local calculation with explicit 18° (adhan-js)
+
+If you want to explicitly enforce 18° for both Fajr and Isha regardless of remote API defaults, you can compute locally with adhan-js.
+
+1) Include adhan-js and the provider:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/adhan@4.4.2/dist/Adhan.js"></script>
+<script src="./src/adhanjs-provider.js"></script>
+```
+
+2) Use it (e.g., Flower Hill coordinates, Karachi method, Hanafi Asr, explicit 18° angles):
+
+```html
+<script>
+  (async () => {
+    const times = PrayerTimeWidget.providers.adhanjs.computeTimesByCoords({
+      latitude: 39.14, longitude: -77.17,
+      method: 'karachi', school: 1,
+      fajrAngle: 18, ishaAngle: 18,
+      timezonestring: 'America/New_York'
+    });
+    PrayerTimeWidget.init({ target: '#my-widget', city: 'Flower Hill, MD', times, theme: 'auto' });
+  })();
+```
+
+You can also plug this into `autoDaily` by wrapping it in a `getTimes` function.
 
 You can fetch daily timings from the public Aladhan API and choose the calculation method, including University of Islamic Sciences, Karachi.
 
@@ -103,7 +130,7 @@ You can fetch daily timings from the public Aladhan API and choose the calculati
 </script>
 ```
 
-Alternatively, fetch by coordinates:
+Alternatively, fetch by coordinates and/or add fine-tuning (offsets):
 
 ```html
 <script>
@@ -112,7 +139,12 @@ Alternatively, fetch by coordinates:
       latitude: 24.8607,
       longitude: 67.0011,
       method: 'karachi', // or numeric ID 2
-      school: 1
+      school: 1,
+      // Optional: fine-tune minutes per prayer to match your local calendar
+      // Format can be a comma-separated string or array. Order: Imsak,Fajr,Sunrise,Dhuhr,Asr,Sunset,Maghrib,Isha,Midnight
+      // e.g., tune: '0,0,0,2,0,0,0,2,0' adds +2 minutes to Dhuhr and Isha
+      tune: '0,0,0,0,0,0,0,0,0',
+      timezonestring: 'America/New_York'
     });
     PrayerTimeWidget.init({ target: '#my-widget', city: 'Karachi', times });
   })();
@@ -203,3 +235,37 @@ Wire it up with `jamaatUrl` (works with `autoDaily`):
 ```
 
 Non-developers can update that JSON file (via a CMS, shared drive sync, or replacing the file) and the widget will pick it up after the next nightly refresh. To force an immediate refresh, just reload the page.
+
+### Or use Google Sheets (CSV) for Jamaat
+
+1) Create a Google Sheet with two columns:
+
+| Prayer | Time        |
+|--------|-------------|
+| Fajr   | 05:30       |
+| Dhuhr  | 01:30 pm    |
+| Asr    | 04:45 pm    |
+| Maghrib| At Sunset   |
+| Isha   | 08:00 pm    |
+
+2) File → Share → Publish to the web → Link → CSV, copy the CSV link.
+
+3) Point `jamaatCsvUrl` to that link:
+
+```html
+<script>
+  PrayerTimeWidget.autoDaily({
+    target: '#widget-flower-hill',
+    city: 'Flower Hill, MD',
+    theme: 'auto',
+    jamaatCsvUrl: 'https://docs.google.com/spreadsheets/d/XXXX/export?format=csv',
+    getTimes: async () => {
+      return await PrayerTimeWidget.providers.aladhan.fetchTimesByCity({
+        city: 'Flower Hill', state: 'Maryland', country: 'United States', method: 'karachi', school: 1
+      });
+    }
+  });
+</script>
+```
+
+Optional: add `jamaatRefreshMinutes: 5` to check the CSV every 5 minutes without reloading the page.

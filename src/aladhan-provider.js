@@ -57,6 +57,11 @@
       school: school,
       date: dateStr
     };
+    if (opts.tune != null) params.tune = Array.isArray(opts.tune) ? opts.tune.join(',') : String(opts.tune);
+    if (opts.latitudeAdjustmentMethod != null) params.latitudeAdjustmentMethod = opts.latitudeAdjustmentMethod;
+    if (opts.midnightMode != null) params.midnightMode = opts.midnightMode;
+    if (opts.shafaq != null) params.shafaq = opts.shafaq;
+    if (opts.timezonestring != null) params.timezonestring = opts.timezonestring;
     var url = 'https://api.aladhan.com/v1/timings?' + toQuery(params);
     var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error('Aladhan request failed: ' + res.status);
@@ -77,6 +82,11 @@
       school: school,
       date: dateStr
     };
+    if (opts.tune != null) params.tune = Array.isArray(opts.tune) ? opts.tune.join(',') : String(opts.tune);
+    if (opts.latitudeAdjustmentMethod != null) params.latitudeAdjustmentMethod = opts.latitudeAdjustmentMethod;
+    if (opts.midnightMode != null) params.midnightMode = opts.midnightMode;
+    if (opts.shafaq != null) params.shafaq = opts.shafaq;
+    if (opts.timezonestring != null) params.timezonestring = opts.timezonestring;
     var url = 'https://api.aladhan.com/v1/timingsByCity?' + toQuery(params);
     var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error('Aladhan request failed: ' + res.status);

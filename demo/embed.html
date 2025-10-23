@@ -9,15 +9,35 @@
     /* Optional center wrapper for nice spacing in iframe */
     .frame-wrap { padding: 8px; }
   </style>
+  <!-- Dynamic style variables set via query params -->
+  <style id="embed-style-vars"></style>
 </head>
 <body>
   <div class="frame-wrap">
     <div id="widget-flower-hill"></div>
   </div>
 
-  <script src="../src/prayertime-widget.js"></script>
-  <script src="../src/aladhan-provider.js"></script>
+  <!-- Append a cache-busting version to ensure latest script is loaded -->
+  <script src="../src/prayertime-widget.js?v=a8d8053"></script>
+  <script src="../src/aladhan-provider.js?v=a8d8053"></script>
   <script>
+    // Allow sizing via URL params: maxWidth (px), font (px), pad (px)
+    (function(){
+      var p = new URLSearchParams(location.search);
+      var maxWidth = p.get('maxWidth'); // e.g., 640
+      var font = p.get('font');         // e.g., 16
+      var pad = p.get('pad');           // e.g., 12
+      var css = '';
+      if (maxWidth) css += '.ptw{--ptw-max-width:' + Number(maxWidth) + 'px;}';
+      if (font || pad) {
+        css += '.ptw .ptw__th,.ptw .ptw__td{';
+        if (font) css += 'font-size:' + Number(font) + 'px;';
+        if (pad) css += 'padding:' + Number(pad) + 'px ' + (Number(pad)+2) + 'px;';
+        css += '}';
+      }
+      if (css) document.getElementById('embed-style-vars').textContent = css;
+    })();
+
     // If used cross-origin, ensure the host allows CORS for jamaat JSON or serve from same origin
     PrayerTimeWidget.autoDaily({
       target: '#widget-flower-hill',
